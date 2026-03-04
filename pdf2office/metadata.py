@@ -1,6 +1,6 @@
 APP_NAME = "PDF2Office"
 APP_ID = "PDF2Office"
-APP_VERSION = "1.0.1"
+APP_VERSION = "0.0.1"
 APP_BUILD_BY = "stever410"
 # Set to your GitHub repo in "owner/repo" format to enable in-app updates.
 APP_GITHUB_REPO = "stever410/pdf2office"
