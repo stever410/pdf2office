@@ -54,15 +54,50 @@ Ship:
 
 ## 4. Automated multi-platform builds (GitHub Actions)
 
-Workflow:
-- `.github/workflows/build-release-artifacts.yml`
+### Workflows
 
-Artifact naming format:
-- `PDF2Office-v1.0.0-windows`
-- `PDF2Office-v1.0.0-macos`
-- `PDF2Office-v1.0.0-linux`
+- **Release Workflow**: `.github/workflows/release.yml` - Builds and publishes releases
+- **CI Workflow**: `.github/workflows/ci.yml` - Continuous integration testing
 
-When pushing a tag like `v1.0.0`, the workflow now also uploads zipped platform bundles to the GitHub Release automatically.
+### Release Artifact Naming
+
+- `PDF2Office-v{version}-windows.zip` - Windows executable
+- `PDF2Office-v{version}-macos.zip` - macOS app bundle
+- `PDF2Office-v{version}-linux.tar.gz` - Linux binary
+
+### Creating a Release
+
+#### Quick Release (using helper script)
+
+**macOS/Linux:**
+```bash
+./scripts/release.sh 1.1.0
+```
+
+**Windows:**
+```powershell
+.\scripts\release.ps1 1.1.0
+```
+
+This script will:
+1. Update `APP_VERSION` in `metadata.py`
+2. Commit the change
+3. Create and push tag `v1.1.0`
+4. Trigger GitHub Actions to build and release
+
+#### Manual Release
+
+1. Update `APP_VERSION` in `pdf2office/metadata.py`
+2. Commit: `git commit -am "Bump version to v1.1.0"`
+3. Create tag: `git tag v1.1.0`
+4. Push: `git push origin main && git push origin v1.1.0`
+
+When pushing a tag like `v1.0.0`, the workflow automatically:
+- Builds for Windows, macOS, and Linux
+- Creates a GitHub Release with all binaries
+- Uploads zipped platform bundles as release assets
+
+See [.github/WORKFLOWS.md](.github/WORKFLOWS.md) for detailed documentation.
 
 ## 5. In-app auto-update (GitHub Releases)
 

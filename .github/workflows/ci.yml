@@ -1,0 +1,135 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  test-build-windows:
+    name: Test Build (Windows)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-build.txt
+
+      - name: Test PyInstaller build
+        run: |
+          python -m PyInstaller --noconfirm pdf2office.spec
+
+      - name: Verify build output
+        run: |
+          if (Test-Path "dist/PDF2Office/PDF2Office.exe") {
+            Write-Host "✓ Build successful: PDF2Office.exe created"
+          } else {
+            Write-Error "✗ Build failed: PDF2Office.exe not found"
+            exit 1
+          }
+
+  test-build-macos:
+    name: Test Build (macOS)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-build.txt
+
+      - name: Test PyInstaller build
+        run: |
+          python3 -m PyInstaller --noconfirm pdf2office.spec
+
+      - name: Verify build output
+        run: |
+          if [ -d "dist/PDF2Office.app" ]; then
+            echo "✓ Build successful: PDF2Office.app created"
+          else
+            echo "✗ Build failed: PDF2Office.app not found"
+            exit 1
+          fi
+
+  test-build-linux:
+    name: Test Build (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-build.txt
+
+      - name: Test PyInstaller build
+        run: |
+          python3 -m PyInstaller --noconfirm pdf2office.spec
+
+      - name: Verify build output
+        run: |
+          if [ -f "dist/PDF2Office/PDF2Office" ]; then
+            echo "✓ Build successful: PDF2Office binary created"
+          else
+            echo "✗ Build failed: PDF2Office binary not found"
+            exit 1
+          fi
+
+  code-quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Check Python syntax
+        run: |
+          python3 -m py_compile pdf2office.py
+          python3 -m compileall pdf2office/
+
+      - name: Verify metadata
+        run: |
+          python3 -c "from pdf2office.metadata import APP_NAME, APP_VERSION, APP_GITHUB_REPO; print(f'App: {APP_NAME} v{APP_VERSION}'); print(f'Repo: {APP_GITHUB_REPO}')"

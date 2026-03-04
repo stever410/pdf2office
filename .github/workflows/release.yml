@@ -1,0 +1,190 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Triggers on version tags like v1.0.0, v1.2.3, etc.
+  workflow_dispatch:  # Allows manual triggering from GitHub UI
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      version: ${{ steps.get_version.outputs.version }}
+    steps:
+      - name: Get version from tag
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=dev-build" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: PDF2Office v${{ steps.get_version.outputs.version }}
+          body: |
+            ## PDF2Office v${{ steps.get_version.outputs.version }}
+            
+            ### Downloads
+            - **Windows**: `PDF2Office-v${{ steps.get_version.outputs.version }}-windows.zip`
+            - **macOS**: `PDF2Office-v${{ steps.get_version.outputs.version }}-macos.zip`
+            - **Linux**: `PDF2Office-v${{ steps.get_version.outputs.version }}-linux.tar.gz`
+            
+            ### Installation
+            1. Download the appropriate file for your operating system
+            2. Extract the archive
+            3. Run the application:
+               - Windows: Double-click `PDF2Office.exe`
+               - macOS: Double-click `PDF2Office.app`
+               - Linux: Run `./PDF2Office` in terminal
+            
+            ### Changes
+            See [CHANGELOG.md](CHANGELOG.md) for details.
+          draft: false
+          prerelease: false
+
+  build-windows:
+    name: Build for Windows
+    needs: create-release
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-build.txt
+
+      - name: Build with PyInstaller
+        run: |
+          python -m PyInstaller --noconfirm pdf2office.spec
+
+      - name: Create Windows archive
+        run: |
+          $version = "${{ needs.create-release.outputs.version }}"
+          Compress-Archive -Path "dist/PDF2Office/*" -DestinationPath "PDF2Office-v$version-windows.zip"
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: windows-build
+          path: PDF2Office-v${{ needs.create-release.outputs.version }}-windows.zip
+
+      - name: Upload to Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./PDF2Office-v${{ needs.create-release.outputs.version }}-windows.zip
+          asset_name: PDF2Office-v${{ needs.create-release.outputs.version }}-windows.zip
+          asset_content_type: application/zip
+
+  build-macos:
+    name: Build for macOS
+    needs: create-release
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-build.txt
+
+      - name: Build with PyInstaller
+        run: |
+          python3 -m PyInstaller --noconfirm pdf2office.spec
+
+      - name: Create macOS archive
+        run: |
+          cd dist
+          zip -r ../PDF2Office-v${{ needs.create-release.outputs.version }}-macos.zip PDF2Office.app
+          cd ..
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: macos-build
+          path: PDF2Office-v${{ needs.create-release.outputs.version }}-macos.zip
+
+      - name: Upload to Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./PDF2Office-v${{ needs.create-release.outputs.version }}-macos.zip
+          asset_name: PDF2Office-v${{ needs.create-release.outputs.version }}-macos.zip
+          asset_content_type: application/zip
+
+  build-linux:
+    name: Build for Linux
+    needs: create-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-build.txt
+
+      - name: Build with PyInstaller
+        run: |
+          python3 -m PyInstaller --noconfirm pdf2office.spec
+
+      - name: Create Linux archive
+        run: |
+          cd dist
+          tar -czf ../PDF2Office-v${{ needs.create-release.outputs.version }}-linux.tar.gz PDF2Office
+          cd ..
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: linux-build
+          path: PDF2Office-v${{ needs.create-release.outputs.version }}-linux.tar.gz
+
+      - name: Upload to Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./PDF2Office-v${{ needs.create-release.outputs.version }}-linux.tar.gz
+          asset_name: PDF2Office-v${{ needs.create-release.outputs.version }}-linux.tar.gz
+          asset_content_type: application/gzip
