@@ -1,0 +1,72 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+.env
+
+# PyInstaller
+build/
+dist/
+*.spec.bak
+
+# Distribution / packaging
+*.egg-info/
+.eggs/
+*.egg
+wheels/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.bak
+*.orig
+.~*
+
+# Build artifacts
+*.dmg
+*.pkg
+*.deb
+*.rpm
+*.exe
+*.msi
+*.zip
+*.tar.gz
+*.app
+
+# Except the icon
+!icon.png
+
+# Local configuration
+.env.local
+config.local.py
+settings.local.py
