@@ -47,13 +47,37 @@ jobs:
           fi
 
       - name: Install NSIS
-        run: choco install nsis --yes --no-progress
+        run: |
+          choco install nsis --yes --no-progress
+          # Refresh environment variables
+          $env:PATH = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 
       - name: Create Windows installer
+        shell: pwsh
         run: |
           $version = "${{ steps.get_version.outputs.version }}"
-          $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-          & "C:\Program Files (x86)\NSIS\makensis.exe" /DVERSION=$version /DOUT_FILE="PDF2Office-Setup-v$version-windows.exe" scripts\installer\windows.nsi
+          # Try common NSIS installation paths
+          $nsisPaths = @(
+            "C:\Program Files (x86)\NSIS\makensis.exe",
+            "C:\Program Files\NSIS\makensis.exe",
+            "$env:ProgramFiles\NSIS\makensis.exe",
+            "${env:ProgramFiles(x86)}\NSIS\makensis.exe"
+          )
+          
+          $makensis = $nsisPaths | Where-Object { Test-Path $_ } | Select-Object -First 1
+          
+          if (-not $makensis) {
+            # Try to find it in PATH
+            $makensis = (Get-Command makensis -ErrorAction SilentlyContinue).Source
+          }
+          
+          if (-not $makensis) {
+            Write-Error "NSIS makensis.exe not found in any expected location"
+            exit 1
+          }
+          
+          Write-Host "Using NSIS at: $makensis"
+          & $makensis /DVERSION=$version /DOUT_FILE="PDF2Office-Setup-v$version-windows.exe" scripts\installer\windows.nsi
 
       - name: Create Windows portable archive
         run: |
