@@ -1,0 +1,1 @@
+"""Bao gia application package."""
