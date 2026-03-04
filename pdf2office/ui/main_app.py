@@ -435,16 +435,21 @@ class App(tk.Tk):
             return
 
         self._status_var.set(self._s("status_update_downloaded", name=path.name))
+        assert self._updater is not None
+        is_installer = self._updater.is_installer_asset_name(path.name)
         should_open = messagebox.askyesno(
             self._s("updates_title"),
-            self._s("updates_downloaded", path=str(path)),
+            self._s("updates_downloaded_installer" if is_installer else "updates_downloaded", path=str(path)),
         )
         if not should_open:
+            self._restore_idle_status()
             return
 
         try:
-            assert self._updater is not None
             self._updater.open_download(path)
+            if is_installer:
+                # Let installer replace files without lock conflicts.
+                self.after(400, self.destroy)
         except Exception as exc:
             messagebox.showerror(
                 self._s("updates_title"),

@@ -1,12 +1,18 @@
 import json
 import os
 import re
+import ssl
 import subprocess
 import sys
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
+
+try:
+    import certifi
+except ImportError:
+    certifi = None
 
 
 @dataclass(frozen=True)
@@ -50,11 +56,21 @@ class GitHubReleaseUpdater:
         ".tar.xz",
         ".tar.bz2",
     )
+    _INSTALLER_SUFFIXES = (
+        ".exe",
+        ".msi",
+        ".dmg",
+        ".pkg",
+        ".appimage",
+        ".deb",
+        ".rpm",
+    )
 
     def __init__(self, repo: str, current_version: str, timeout_sec: int = 6):
         self._repo = repo.strip()
         self._current_version = current_version.strip()
         self._timeout_sec = max(2, int(timeout_sec))
+        self._ssl_context = self._build_ssl_context()
 
     def check_for_update(self) -> ReleaseInfo | None:
         release = self._fetch_latest_release()
@@ -78,7 +94,7 @@ class GitHubReleaseUpdater:
             release.asset.url,
             headers={"Accept": "application/octet-stream", "User-Agent": "pdf2office-updater"},
         )
-        with urllib.request.urlopen(req, timeout=self._timeout_sec) as response:
+        with urllib.request.urlopen(req, timeout=self._timeout_sec, context=self._ssl_context) as response:
             total = int(response.headers.get("Content-Length") or 0)
             downloaded = 0
             with open(out_path, "wb") as file:
@@ -94,6 +110,10 @@ class GitHubReleaseUpdater:
 
     @staticmethod
     def open_download(path: Path):
+        lower = path.name.lower()
+        if sys.platform == "win32" and lower.endswith(".msi"):
+            subprocess.Popen(["msiexec", "/i", str(path)])
+            return
         if sys.platform == "win32":
             os.startfile(str(path))  # type: ignore[attr-defined]
             return
@@ -101,6 +121,10 @@ class GitHubReleaseUpdater:
             subprocess.Popen(["open", str(path)])
             return
         subprocess.Popen(["xdg-open", str(path)])
+
+    @classmethod
+    def is_installer_asset_name(cls, name: str) -> bool:
+        return name.lower().endswith(cls._INSTALLER_SUFFIXES)
 
     def _fetch_latest_release(self) -> ReleaseInfo:
         if not self._repo:
@@ -111,7 +135,7 @@ class GitHubReleaseUpdater:
             url,
             headers={"Accept": "application/vnd.github+json", "User-Agent": "pdf2office-updater"},
         )
-        with urllib.request.urlopen(req, timeout=self._timeout_sec) as response:
+        with urllib.request.urlopen(req, timeout=self._timeout_sec, context=self._ssl_context) as response:
             data = json.loads(response.read().decode("utf-8"))
 
         tag_name = str(data.get("tag_name", "")).strip()
@@ -171,7 +195,9 @@ class GitHubReleaseUpdater:
         if not valid_assets:
             return None
 
-        return max(valid_assets, key=lambda asset: self._score_asset(asset.name))
+        installer_assets = [asset for asset in valid_assets if self.is_installer_asset_name(asset.name)]
+        candidate_assets = installer_assets if installer_assets else valid_assets
+        return max(candidate_assets, key=lambda asset: self._score_asset(asset.name))
 
     def _is_binary_asset(self, name: str) -> bool:
         lower = name.lower()
@@ -228,3 +254,13 @@ class GitHubReleaseUpdater:
         if platform == "macos":
             return (".dmg", ".pkg")
         return (".appimage", ".deb", ".rpm", ".tar.gz")
+
+    @staticmethod
+    def _build_ssl_context() -> ssl.SSLContext:
+        # Start from system trust, then add bundled Mozilla CA roots.
+        context = ssl.create_default_context()
+        if certifi:
+            cafile = certifi.where()
+            if cafile and Path(cafile).exists():
+                context.load_verify_locations(cafile=cafile)
+        return context

@@ -22,6 +22,7 @@ Desktop app to convert table data from PDF files into Excel (`.xlsx`) or Word (`
 - In-app updates
   - `Help > Check for Updates...`
   - Optional startup auto-check via GitHub Releases
+  - Installer assets (`.exe`, `.msi`, `.dmg`, `.pkg`) are downloaded and launched directly
 - Local desktop UI
   - No cloud requirement for core conversion
 
@@ -33,6 +34,7 @@ Desktop app to convert table data from PDF files into Excel (`.xlsx`) or Word (`
   - `pdfplumber`
   - `openpyxl`
   - `python-docx`
+  - `certifi` (used for secure update checks)
 
 Install dependencies:
 

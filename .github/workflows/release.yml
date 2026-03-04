@@ -43,16 +43,26 @@ jobs:
             echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Create Windows archive
+      - name: Install NSIS
+        run: choco install nsis --yes --no-progress
+
+      - name: Create Windows installer
+        run: |
+          $version = "${{ steps.get_version.outputs.version }}"
+          makensis /DVERSION=$version /DOUT_FILE="PDF2Office-Setup-v$version-windows.exe" scripts\installer\windows.nsi
+
+      - name: Create Windows portable archive
         run: |
           $version = "${{ steps.get_version.outputs.version }}"
           Compress-Archive -Path "dist/PDF2Office/*" -DestinationPath "PDF2Office-v$version-windows.zip"
 
-      - name: Upload Windows artifact
+      - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
           name: windows-build
-          path: PDF2Office-v${{ steps.get_version.outputs.version }}-windows.zip
+          path: |
+            PDF2Office-Setup-v${{ steps.get_version.outputs.version }}-windows.exe
+            PDF2Office-v${{ steps.get_version.outputs.version }}-windows.zip
 
   build-macos:
     name: Build for macOS
@@ -86,17 +96,24 @@ jobs:
             echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Create macOS archive
+      - name: Create macOS DMG installer
+        run: |
+          version="${{ steps.get_version.outputs.version }}"
+          hdiutil create -volname "PDF2Office" -srcfolder "dist/PDF2Office.app" -ov -format UDZO "PDF2Office-v${version}-macos.dmg"
+
+      - name: Create macOS portable archive
         run: |
           cd dist
           zip -r ../PDF2Office-v${{ steps.get_version.outputs.version }}-macos.zip PDF2Office.app
           cd ..
 
-      - name: Upload macOS artifact
+      - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
           name: macos-build
-          path: PDF2Office-v${{ steps.get_version.outputs.version }}-macos.zip
+          path: |
+            PDF2Office-v${{ steps.get_version.outputs.version }}-macos.dmg
+            PDF2Office-v${{ steps.get_version.outputs.version }}-macos.zip
 
   build-linux:
     name: Build for Linux
@@ -170,17 +187,18 @@ jobs:
             ## PDF2Office v${{ steps.get_version.outputs.version }}
             
             ### Downloads
-            - **Windows**: `PDF2Office-v${{ steps.get_version.outputs.version }}-windows.zip`
-            - **macOS**: `PDF2Office-v${{ steps.get_version.outputs.version }}-macos.zip`
+            - **Windows installer**: `PDF2Office-Setup-v${{ steps.get_version.outputs.version }}-windows.exe`
+            - **Windows portable**: `PDF2Office-v${{ steps.get_version.outputs.version }}-windows.zip`
+            - **macOS installer**: `PDF2Office-v${{ steps.get_version.outputs.version }}-macos.dmg`
+            - **macOS portable**: `PDF2Office-v${{ steps.get_version.outputs.version }}-macos.zip`
             - **Linux**: `PDF2Office-v${{ steps.get_version.outputs.version }}-linux.tar.gz`
             
             ### Installation
-            1. Download the appropriate file for your operating system
-            2. Extract the archive
-            3. Run the application:
-               - Windows: Double-click `PDF2Office.exe`
-               - macOS: Double-click `PDF2Office.app`
-               - Linux: Run `./PDF2Office` in terminal
+            1. Download the installer for your operating system
+            2. Install:
+               - Windows: Run `PDF2Office-Setup-v${{ steps.get_version.outputs.version }}-windows.exe`
+               - macOS: Open `PDF2Office-v${{ steps.get_version.outputs.version }}-macos.dmg` and drag app to Applications
+               - Linux: Extract `PDF2Office-v${{ steps.get_version.outputs.version }}-linux.tar.gz` and run `./PDF2Office`
             
             ### Changes
             See [CHANGELOG.md](CHANGELOG.md) for details.

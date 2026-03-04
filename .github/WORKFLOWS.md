@@ -71,12 +71,14 @@ This creates a development build without creating a tag or release.
 
 ## Release Artifacts
 
-Each release includes three archives:
+Each release includes installer + portable assets:
 
-- **`PDF2Office-v{version}-windows.zip`** - Windows executable
+- **`PDF2Office-Setup-v{version}-windows.exe`** - Windows installer
+- **`PDF2Office-v{version}-windows.zip`** - Windows portable bundle
   - Contains `PDF2Office.exe` and dependencies
   
-- **`PDF2Office-v{version}-macos.zip`** - macOS application
+- **`PDF2Office-v{version}-macos.dmg`** - macOS installer image
+- **`PDF2Office-v{version}-macos.zip`** - macOS portable application
   - Contains `PDF2Office.app` bundle
   
 - **`PDF2Office-v{version}-linux.tar.gz`** - Linux binary
@@ -94,6 +96,7 @@ The app includes auto-update checking that uses GitHub Releases:
 
 - On startup, the app checks the latest release via GitHub API
 - Users are notified when a new version is available
+- If the selected asset is an installer (`.exe`, `.msi`, `.dmg`, `.pkg`, `.deb`, `.rpm`, `.AppImage`), the app downloads it, launches it, and closes itself to avoid file-lock conflicts
 
 ## Troubleshooting
 
