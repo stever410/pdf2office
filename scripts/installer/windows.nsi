@@ -11,6 +11,10 @@
   !define OUT_FILE "PDF2Office-Setup-v${VERSION}-windows.exe"
 !endif
 
+!ifndef SRC_DIR
+  !define SRC_DIR "dist\PDF2Office"
+!endif
+
 Name "${APP_NAME} ${VERSION}"
 OutFile "${OUT_FILE}"
 Unicode True
@@ -30,7 +34,7 @@ InstallDirRegKey HKCU "Software\${APP_NAME}" "InstallDir"
 
 Section "Install"
   SetOutPath "$INSTDIR"
-  File /r "dist\PDF2Office\*.*"
+  File /r "${SRC_DIR}\*.*"
 
   WriteRegStr HKCU "Software\${APP_NAME}" "InstallDir" "$INSTDIR"
   WriteUninstaller "$INSTDIR\Uninstall ${APP_NAME}.exe"
